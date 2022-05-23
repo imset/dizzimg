@@ -1,0 +1,8 @@
+.psds/
+__pycache__/
+dizzimg/__pycache__/
+tests/
+dizzimg.egg-info/
+dist/
+build/
+.venv/
