@@ -8,27 +8,31 @@ import cProfile
 import fast_colorthief
 from . import helper
 
-basepath = Path(__file__).parent
+basepath = Path(__file__).parents[1]
 
-class DotFilter(object):
-    def __init__(self, size, bgcolor, space, image=f"{basepath}/data/img/gg.png"):
+class TileFilter(object):
+    def __init__(self, style, size, bgcolor, space, rotation, image=f"{basepath}/data/img/vegeta.png"):
+        self.rotation = rotation
+        self.style = style.lower() or "square"
         self.image = Image.open(image)
-        self.size = size or 16
+        self.size = size or 8
         self.sizesqr = self.size*self.size
         self.bgcolor = bgcolor or "black"
+        if self.bgcolor.lower() == "transparent":
+            self.bgcolor = (0, 0, 0, 0)
         self.space = space
 
     #def generate(self, show=False, save=False, name=None, returnbytes=False):
     def generate(self, **kwargs):
         ctarray = self.ctarray()
-        finalimg = self.dotstyle(colorarray=ctarray, bgcolor=self.bgcolor, space=self.space)
+        finalimg = self.tilestyle(self.style, colorarray=ctarray, bgcolor=self.bgcolor, space=self.space, rotation=self.rotation)
         #store in a variable and return in case we want to return a bytes object, if not generator still functions
         #generated = helper.generator(finalimg=finalimg, show=show, save=save, name=name, returnbytes=returnbytes)
         generated = helper.generator(image=finalimg, **kwargs)
         return generated
 
 
-    def dotstyle(self, colorarray, bgcolor, space):
+    def tilestyle(self, style, colorarray, bgcolor, space, rotation):
         #create the image that'll have circles pasted onto it
         newimg = Image.new("RGBA", (self.image.width, self.image.height), bgcolor)
         initialvals = [space, space, ceil(self.image.width/self.size)+space, ceil(self.image.height/self.size)+space]
@@ -50,13 +54,24 @@ class DotFilter(object):
 
             if wide == True:
                 offset = subimage.height - space
-                c.ellipse([(space, space), (offset, offset)], fill=colorarray[i])
             else:
                 offset = subimage.width - space
-                c.ellipse([(space, space), (offset, offset)], fill=colorarray[i])
+
+            boundbox = [(space, space), (offset, offset)]
+            boundcirc = ((offset/2, offset/2), offset/2)
+
+            if style == "circle":
+                c.ellipse(boundbox, fill=colorarray[i])
+            elif style == "tri" or style == "triangle":
+                c.regular_polygon(bounding_circle=boundcirc, n_sides=3, fill=colorarray[i], rotation=rotation)
+            elif style == "square":
+                c.regular_polygon(bounding_circle=boundcirc, n_sides=4, fill=colorarray[i], rotation=rotation)
+            elif style == "hex" or style == "hexagon":
+                c.regular_polygon(bounding_circle=boundcirc, n_sides=6, fill=colorarray[i], rotation=rotation)
+            elif style =="rounded":
+                c.rounded_rectangle(boundbox, radius=12, fill=colorarray[i])
 
             newimg.alpha_composite(subimage, dest=(ceil(initialvals[0]), ceil(initialvals[1])))
-            #newimg.show()
 
             if not initialvals[2] >= newimg.width: 
                 initialvals[0] += ceil(newimg.width/self.size)
@@ -66,7 +81,6 @@ class DotFilter(object):
                 initialvals[3] += ceil(newimg.height/self.size)
                 initialvals[2] = ceil(newimg.width/self.size)
                 initialvals[0] = space
-
         return newimg
 
 
